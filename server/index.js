@@ -9,7 +9,6 @@ const dataDir = path.join(__dirname, '..', 'data')
 fs.mkdirSync(dataDir, { recursive: true })
 
 const db = openDb(path.join(dataDir, 'todos.db'))
-db.exec('PRAGMA journal_mode = WAL')
 
 const app = createApp(db)
 const port = process.env.PORT || 3000

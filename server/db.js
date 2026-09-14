@@ -6,6 +6,8 @@ const { DatabaseSync } = require(builtinSpec)
 
 export function openDb(dbPath) {
   const db = new DatabaseSync(dbPath)
+  db.exec('PRAGMA journal_mode = WAL')
+  db.exec('PRAGMA synchronous = NORMAL')
   db.exec(`
     CREATE TABLE IF NOT EXISTS todos (
       id INTEGER PRIMARY KEY AUTOINCREMENT,

@@ -106,6 +106,16 @@ h1 {
   text-decoration: underline;
 }
 
+.error-banner {
+  background: #fee2e2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin-bottom: 16px;
+  font-size: 0.9rem;
+}
+
 #clear-wrap {
   text-align: right;
   margin-bottom: 0;

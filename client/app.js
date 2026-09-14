@@ -1,6 +1,38 @@
+async function api(path, options) {
+  const res = await fetch(path, options)
+  if (!res.ok) {
+    let message = `Request failed (${res.status})`
+    try {
+      const body = await res.json()
+      if (body && body.error) message = body.error
+    } catch {
+      // keep fallback message
+    }
+    throw new Error(message)
+  }
+  if (res.status === 204) return null
+  return res.json()
+}
+
+function showError(message) {
+  const banner = document.getElementById('error-banner')
+  banner.textContent = message
+  banner.hidden = false
+  clearTimeout(showError._timer)
+  showError._timer = setTimeout(() => {
+    banner.hidden = true
+  }, 4000)
+}
+
 async function refresh() {
-  const res = await fetch('/api/todos')
-  const todos = await res.json()
+  let todos
+  try {
+    todos = await api('/api/todos')
+  } catch (err) {
+    showError(`Could not load todos: ${err.message}`)
+    return
+  }
+
   const list = document.getElementById('todo-list')
   list.innerHTML = ''
   todos.forEach((todo) => {
@@ -38,31 +70,47 @@ async function addTodo() {
   const input = document.getElementById('new-todo')
   const title = input.value.trim()
   if (!title) return
-  await fetch('/api/todos', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ title }),
-  })
+  try {
+    await api('/api/todos', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title }),
+    })
+  } catch (err) {
+    showError(`Could not add todo: ${err.message}`)
+  }
   input.value = ''
   refresh()
 }
 
 async function toggle(id, completed) {
-  await fetch(`/api/todos/${id}`, {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ completed }),
-  })
+  try {
+    await api(`/api/todos/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ completed }),
+    })
+  } catch (err) {
+    showError(`Could not update todo: ${err.message}`)
+  }
   refresh()
 }
 
 async function remove(id) {
-  await fetch(`/api/todos/${id}`, { method: 'DELETE' })
+  try {
+    await api(`/api/todos/${id}`, { method: 'DELETE' })
+  } catch (err) {
+    showError(`Could not delete todo: ${err.message}`)
+  }
   refresh()
 }
 
 async function clearCompleted() {
-  await fetch('/api/todos?scope=completed', { method: 'DELETE' })
+  try {
+    await api('/api/todos?scope=completed', { method: 'DELETE' })
+  } catch (err) {
+    showError(`Could not clear completed: ${err.message}`)
+  }
   refresh()
 }
 

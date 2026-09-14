@@ -28,6 +28,10 @@ async function refresh() {
     li.appendChild(del)
     list.appendChild(li)
   })
+
+  const clearWrap = document.getElementById('clear-wrap')
+  const hasCompleted = todos.some((t) => t.completed)
+  clearWrap.hidden = !hasCompleted
 }
 
 async function addTodo() {
@@ -57,9 +61,15 @@ async function remove(id) {
   refresh()
 }
 
+async function clearCompleted() {
+  await fetch('/api/todos?scope=completed', { method: 'DELETE' })
+  refresh()
+}
+
 document.getElementById('add-form').addEventListener('submit', (e) => {
   e.preventDefault()
   addTodo()
 })
+document.getElementById('clear-completed').addEventListener('click', clearCompleted)
 
 refresh()

@@ -48,6 +48,14 @@ export function createApp(db) {
     res.json(toTodo(updated))
   })
 
+  app.delete('/api/todos', (req, res) => {
+    if (req.query.scope !== 'completed') {
+      return res.status(400).json({ error: 'unsupported scope; use ?scope=completed' })
+    }
+    db.prepare('DELETE FROM todos WHERE completed = 1').run()
+    res.status(204).end()
+  })
+
   app.delete('/api/todos/:id', (req, res) => {
     const id = Number(req.params.id)
     if (!Number.isInteger(id)) {

@@ -92,3 +92,21 @@ h1 {
 .delete:hover {
   color: #dc2626;
 }
+
+.text-btn {
+  border: none;
+  background: transparent;
+  color: #1d4ed8;
+  font-size: 0.9rem;
+  cursor: pointer;
+  padding: 4px 0;
+}
+
+.text-btn:hover {
+  text-decoration: underline;
+}
+
+#clear-wrap {
+  text-align: right;
+  margin-bottom: 0;
+}

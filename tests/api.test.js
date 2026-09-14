@@ -117,4 +117,22 @@ describe('todo API', () => {
     const res = await request(app).patch('/api/todos/abc').send({ completed: true })
     expect(res.status).toBe(400)
   })
+
+  it('bulk-deletes only completed todos', async () => {
+    await request(app).post('/api/todos').send({ title: 'a' })
+    const b = await request(app).post('/api/todos').send({ title: 'b' })
+    await request(app).post('/api/todos').send({ title: 'c' })
+    await request(app).patch(`/api/todos/${b.body.id}`).send({ completed: true })
+
+    const res = await request(app).delete('/api/todos?scope=completed')
+    expect(res.status).toBe(204)
+
+    const list = await request(app).get('/api/todos')
+    expect(list.body.map((t) => t.title).sort()).toEqual(['a', 'c'])
+  })
+
+  it('rejects an unsupported delete scope', async () => {
+    const res = await request(app).delete('/api/todos?scope=all')
+    expect(res.status).toBe(400)
+  })
 })

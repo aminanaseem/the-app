@@ -7,6 +7,16 @@ import { createApp } from '../server/app.js'
 import request from 'supertest'
 
 describe('persistence', () => {
+  it('enables WAL journaling on file-backed databases', () => {
+    const dir = mkdtempSync(path.join(tmpdir(), 'the-app-'))
+    const dbPath = path.join(dir, 'wal.db')
+    const db = openDb(dbPath)
+    const row = db.prepare('PRAGMA journal_mode').get()
+    expect(row.journal_mode).toBe('wal')
+    db.close()
+    rmSync(dir, { recursive: true, force: true })
+  })
+
   it('keeps todos across a database reopen (file-backed)', async () => {
     const dir = mkdtempSync(path.join(tmpdir(), 'the-app-'))
     const dbPath = path.join(dir, 'todos.db')

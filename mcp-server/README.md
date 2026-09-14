@@ -37,10 +37,10 @@ Project-scoped (auto-loaded, committed with the repo): create `.mcp.json` at the
 }
 ```
 
-Or add it with the CLI (defaults to the project-scope `.mcp.json`; add `--scope user` for your whole machine):
+Or add it with the CLI to the project config (`--scope project` writes `.mcp.json` at the repo root; `local` — the default — stores it in your user config instead):
 
 ```bash
-claude mcp add the-app -- node mcp-server/index.js
+claude mcp add the-app --scope project -- node mcp-server/index.js
 ```
 
 ## Register with Codex

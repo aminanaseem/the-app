@@ -39,7 +39,7 @@ npm start        # http://localhost:3000
 
 `mcp-server/` exposes `get_todos`, `explain_code`, and `where_is_state_stored` over stdio.
 
-Register with Claude Code (project-scoped `.claude/mcp.json`):
+Register with Claude Code (project-scoped `.mcp.json` at repo root):
 
 ```json
 { "mcpServers": { "the-app": { "command": "node", "args": ["mcp-server/index.js"] } } }

@@ -9,7 +9,7 @@
     "the-app-mcp": "./index.js"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=22.5.0"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.12.1",

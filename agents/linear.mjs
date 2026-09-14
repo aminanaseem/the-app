@@ -30,8 +30,9 @@ async function team() {
 }
 
 async function states() {
+  const teamKey = process.env.LINEAR_TEAM_KEY || 'THE'
   const data = await gql(`query { workflowStates { nodes { id name team { key } } } }`)
-  return data.workflowStates.nodes.filter((s) => s.team.key === 'THE')
+  return data.workflowStates.nodes.filter((s) => s.team.key === teamKey)
 }
 
 async function labels() {

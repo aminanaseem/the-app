@@ -24,7 +24,7 @@ Override the DB path with the `TODO_DB_PATH` env var (defaults to `data/todos.db
 
 ## Register with Claude Code
 
-Project-scoped (auto-loaded): create `.claude/mcp.json` at the repo root:
+Project-scoped (auto-loaded, committed with the repo): create `.mcp.json` at the repo root:
 
 ```json
 {
@@ -37,7 +37,7 @@ Project-scoped (auto-loaded): create `.claude/mcp.json` at the repo root:
 }
 ```
 
-Or user-scoped:
+Or add it with the CLI (defaults to the project-scope `.mcp.json`; add `--scope user` for your whole machine):
 
 ```bash
 claude mcp add the-app -- node mcp-server/index.js

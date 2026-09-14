@@ -37,7 +37,23 @@ npm start        # http://localhost:3000
 
 ## MCP server
 
-See `mcp-server/README.md` for registering it with Claude Code and Codex.
+`mcp-server/` exposes `get_todos`, `explain_code`, and `where_is_state_stored` over stdio.
+
+Register with Claude Code (project-scoped `.mcp.json` at repo root):
+
+```json
+{ "mcpServers": { "the-app": { "command": "node", "args": ["mcp-server/index.js"] } } }
+```
+
+Or Codex `config.toml`:
+
+```toml
+[mcp_servers.the-app]
+command = "node"
+args = ["mcp-server/index.js"]
+```
+
+Full details: `mcp-server/README.md`.
 
 ## Agents
 

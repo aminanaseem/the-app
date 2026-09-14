@@ -118,6 +118,26 @@ describe('todo API', () => {
     expect(res.status).toBe(400)
   })
 
+  describe('strict id validation', () => {
+    const badIds = ['1e2', '1.0', '12x', 'abc', '0x1', '+1', '-1', ' 1']
+    for (const bad of badIds) {
+      it(`rejects PATCH /api/todos/${bad}`, async () => {
+        const res = await request(app).patch(`/api/todos/${encodeURIComponent(bad)}`).send({ completed: true })
+        expect(res.status).toBe(400)
+      })
+      it(`rejects DELETE /api/todos/${bad}`, async () => {
+        const res = await request(app).delete(`/api/todos/${encodeURIComponent(bad)}`)
+        expect(res.status).toBe(400)
+      })
+    }
+
+    it('still accepts a canonical numeric id', async () => {
+      const added = await request(app).post('/api/todos').send({ title: 'ok' })
+      const res = await request(app).delete(`/api/todos/${added.body.id}`)
+      expect(res.status).toBe(204)
+    })
+  })
+
   it('bulk-deletes only completed todos', async () => {
     await request(app).post('/api/todos').send({ title: 'a' })
     const b = await request(app).post('/api/todos').send({ title: 'b' })

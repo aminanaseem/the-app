@@ -34,10 +34,15 @@ export function createApp(db) {
     if (!row) {
       return res.status(404).json({ error: 'todo not found' })
     }
-    const completed =
-      typeof req.body?.completed === 'boolean'
-        ? req.body.completed
-        : Boolean(row.completed)
+    const hasCompleted = req.body && 'completed' in req.body
+    let completed
+    if (!hasCompleted) {
+      completed = !Boolean(row.completed)
+    } else if (typeof req.body.completed === 'boolean') {
+      completed = req.body.completed
+    } else {
+      return res.status(400).json({ error: 'completed must be a boolean' })
+    }
     db.prepare('UPDATE todos SET completed = ? WHERE id = ?').run(completed ? 1 : 0, id)
     const updated = db.prepare('SELECT * FROM todos WHERE id = ?').get(id)
     res.json(toTodo(updated))

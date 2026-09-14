@@ -91,6 +91,23 @@ describe('todo API', () => {
     expect(res.status).toBe(404)
   })
 
+  it('toggles completion with a bare PATCH (no body)', async () => {
+    const added = await request(app).post('/api/todos').send({ title: 'task' })
+    const first = await request(app).patch(`/api/todos/${added.body.id}`)
+    expect(first.status).toBe(200)
+    expect(first.body.completed).toBe(true)
+    const second = await request(app).patch(`/api/todos/${added.body.id}`)
+    expect(second.body.completed).toBe(false)
+  })
+
+  it('rejects a non-boolean completed field', async () => {
+    const added = await request(app).post('/api/todos').send({ title: 'task' })
+    const res = await request(app)
+      .patch(`/api/todos/${added.body.id}`)
+      .send({ completed: 'true' })
+    expect(res.status).toBe(400)
+  })
+
   it('returns 404 when deleting a missing todo', async () => {
     const res = await request(app).delete('/api/todos/999')
     expect(res.status).toBe(404)

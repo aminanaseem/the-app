@@ -26,8 +26,8 @@ export function createApp(db) {
   })
 
   app.patch('/api/todos/:id', (req, res) => {
-    const id = Number(req.params.id)
-    if (!Number.isInteger(id)) {
+    const id = parseId(req.params.id)
+    if (id === null) {
       return res.status(400).json({ error: 'invalid id' })
     }
     const row = db.prepare('SELECT * FROM todos WHERE id = ?').get(id)
@@ -57,8 +57,8 @@ export function createApp(db) {
   })
 
   app.delete('/api/todos/:id', (req, res) => {
-    const id = Number(req.params.id)
-    if (!Number.isInteger(id)) {
+    const id = parseId(req.params.id)
+    if (id === null) {
       return res.status(400).json({ error: 'invalid id' })
     }
     const info = db.prepare('DELETE FROM todos WHERE id = ?').run(id)
@@ -69,6 +69,14 @@ export function createApp(db) {
   })
 
   return app
+}
+
+function parseId(raw) {
+  if (typeof raw !== 'string' || !/^[0-9]+$/.test(raw)) {
+    return null
+  }
+  const id = Number(raw)
+  return Number.isSafeInteger(id) && id > 0 ? id : null
 }
 
 function toTodo(row) {

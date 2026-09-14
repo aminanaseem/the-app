@@ -31,6 +31,34 @@ describe('todo API', () => {
     expect(res.status).toBe(400)
   })
 
+  it('rejects an empty-string title', async () => {
+    const res = await request(app).post('/api/todos').send({ title: '' })
+    expect(res.status).toBe(400)
+  })
+
+  it('rejects a missing title field', async () => {
+    const res = await request(app).post('/api/todos').send({})
+    expect(res.status).toBe(400)
+  })
+
+  it('rejects a non-string title field', async () => {
+    const res = await request(app).post('/api/todos').send({ title: 123 })
+    expect(res.status).toBe(400)
+  })
+
+  it('rejects a title longer than 200 characters', async () => {
+    const res = await request(app)
+      .post('/api/todos')
+      .send({ title: 'x'.repeat(201) })
+    expect(res.status).toBe(400)
+    expect(res.body.error).toContain('200')
+  })
+
+  it('accepts a title of exactly 200 characters', async () => {
+    const res = await request(app).post('/api/todos').send({ title: 'y'.repeat(200) })
+    expect(res.status).toBe(201)
+  })
+
   it('completes a todo', async () => {
     const added = await request(app).post('/api/todos').send({ title: 'task' })
     const res = await request(app)

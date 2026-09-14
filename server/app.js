@@ -17,6 +17,9 @@ export function createApp(db) {
     if (!title) {
       return res.status(400).json({ error: 'title is required' })
     }
+    if (title.length > 200) {
+      return res.status(400).json({ error: 'title must be at most 200 characters' })
+    }
     const info = db.prepare('INSERT INTO todos (title) VALUES (?)').run(title)
     const row = db.prepare('SELECT * FROM todos WHERE id = ?').get(info.lastInsertRowid)
     res.status(201).json(toTodo(row))

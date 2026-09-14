@@ -1,0 +1,22 @@
+{
+  "name": "the-app",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Minimal AI-agent-driven Todo List application with automated development, CI, code review, and MCP integration.",
+  "scripts": {
+    "start": "node server/index.js",
+    "test": "vitest run",
+    "build": "node --check server/index.js && node --check server/app.js && node --check server/db.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  },
+  "devDependencies": {
+    "supertest": "^7.0.0",
+    "vitest": "^2.1.1"
+  }
+}

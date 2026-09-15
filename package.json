@@ -10,7 +10,7 @@
     "build": "node --check server/index.js && node --check server/app.js && node --check server/db.js"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=22"
   },
   "dependencies": {
     "express": "^4.19.2"

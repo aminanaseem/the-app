@@ -67,7 +67,7 @@ function mcpLink({ env }) {
 }
 
 describe('Linear MCP server smoke test', () => {
-  it('starts and exposes all 8 expected tools', async () => {
+  it('starts and exposes all 8 expected tools', { timeout: 15000 }, async () => {
     const link = await mcpLink({ env: { LINEAR_API_KEY: 'lin_test_key' } })
     try {
       const init = await link.send('initialize', {

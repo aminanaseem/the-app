@@ -5,10 +5,11 @@ import { createApp } from './app.js'
 import { openDb } from './db.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const dataDir = path.join(__dirname, '..', 'data')
+const dataDir = process.env.RAILWAY_VOLUME_MOUNT_PATH || path.join(__dirname, '..', 'data')
 fs.mkdirSync(dataDir, { recursive: true })
 
-const db = openDb(path.join(dataDir, 'todos.db'))
+const dbPath = process.env.TODO_DB_PATH || path.join(dataDir, 'todos.db')
+const db = openDb(dbPath)
 
 const app = createApp(db)
 const port = process.env.PORT || 3000

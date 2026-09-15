@@ -15,5 +15,8 @@ jobs:
         with:
           node-version: 24
       - run: npm ci
+      - name: Install Linear MCP server deps (tested from repo root)
+        working-directory: mcp-server/linear
+        run: npm ci
       - run: npm test
       - run: npm run build

@@ -1,3 +1,11 @@
+const STATUS_META = {
+  not_started: { label: 'Not started', color: '#64748b' },
+  in_progress: { label: 'In progress', color: '#d97706' },
+  completed: { label: 'Completed', color: '#16a34a' },
+}
+const STATUSES = Object.keys(STATUS_META)
+const RETENTION_DAYS = 10
+
 async function api(path, options) {
   const res = await fetch(path, options)
   if (!res.ok) {
@@ -21,7 +29,51 @@ function showError(message) {
   clearTimeout(showError._timer)
   showError._timer = setTimeout(() => {
     banner.hidden = true
-  }, 4000)
+  }, 5000)
+}
+
+function formatDate(iso) {
+  if (!iso) return ''
+  const normalized = iso.length === 19 && iso.includes(' ') ? iso.replace(' ', 'T') + 'Z' : iso
+  const d = new Date(normalized)
+  if (Number.isNaN(d.getTime())) return ''
+  return new Intl.DateTimeFormat('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: d.getFullYear() === new Date().getFullYear() ? undefined : 'numeric',
+  }).format(d)
+}
+
+function createStatusSelect(todo, onChange) {
+  const select = document.createElement('select')
+  select.className = 'status-select'
+  select.dataset.status = todo.status
+  select.setAttribute('aria-label', 'Status')
+  for (const status of STATUSES) {
+    const opt = document.createElement('option')
+    opt.value = status
+    opt.textContent = STATUS_META[status].label
+    opt.selected = status === todo.status
+    select.appendChild(opt)
+  }
+  select.addEventListener('change', () => {
+    select.dataset.status = select.value
+    onChange(select.value)
+  })
+  return select
+}
+
+async function setStatus(id, status) {
+  try {
+    await api(`/api/todos/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status }),
+    })
+  } catch (err) {
+    showError(`Could not update status: ${err.message}`)
+  }
+  refresh()
 }
 
 async function refresh() {
@@ -37,33 +89,66 @@ async function refresh() {
   list.innerHTML = ''
   todos.forEach((todo) => {
     const li = document.createElement('li')
-    if (todo.completed) li.className = 'completed'
+    li.className = 'todo-item'
+    li.dataset.status = todo.status
 
-    const label = document.createElement('label')
     const checkbox = document.createElement('input')
     checkbox.type = 'checkbox'
+    checkbox.className = 'todo-check'
     checkbox.checked = todo.completed
-    checkbox.addEventListener('change', () => toggle(todo.id, checkbox.checked))
+    checkbox.setAttribute('aria-label', 'Mark completed')
+    checkbox.addEventListener('change', () => {
+      setStatus(todo.id, checkbox.checked ? 'completed' : 'not_started')
+    })
 
-    const span = document.createElement('span')
-    span.textContent = todo.title
+    const body = document.createElement('div')
+    body.className = 'todo-body'
+    const title = document.createElement('span')
+    title.className = 'todo-title'
+    title.textContent = todo.title
+    body.appendChild(title)
 
-    label.appendChild(checkbox)
-    label.appendChild(span)
+    const meta = document.createElement('div')
+    meta.className = 'todo-meta'
+    const created = document.createElement('time')
+    created.textContent = `Added ${formatDate(todo.createdAt)}`
+    meta.appendChild(created)
+    if (todo.status === 'completed') {
+      const done = document.createElement('time')
+      done.textContent = `Done ${formatDate(todo.completedAt)}`
+      meta.appendChild(done)
+    }
+    body.appendChild(meta)
 
+    const actions = document.createElement('div')
+    actions.className = 'todo-actions'
+    const select = createStatusSelect(todo, (status) => setStatus(todo.id, status))
     const del = document.createElement('button')
     del.textContent = '×'
-    del.className = 'delete'
+    del.className = 'delete-btn'
+    del.setAttribute('aria-label', 'Delete')
     del.addEventListener('click', () => remove(todo.id))
+    actions.appendChild(select)
+    actions.appendChild(del)
 
-    li.appendChild(label)
-    li.appendChild(del)
+    li.appendChild(checkbox)
+    li.appendChild(body)
+    li.appendChild(actions)
     list.appendChild(li)
   })
 
-  const clearWrap = document.getElementById('clear-wrap')
-  const hasCompleted = todos.some((t) => t.completed)
-  clearWrap.hidden = !hasCompleted
+  const open = todos.filter((t) => t.status === 'not_started').length
+  const progress = todos.filter((t) => t.status === 'in_progress').length
+  const done = todos.filter((t) => t.status === 'completed').length
+  document.getElementById('count-open').textContent = open
+  document.getElementById('count-progress').textContent = progress
+  document.getElementById('count-done').textContent = done
+
+  document.getElementById('empty-state').hidden = todos.length > 0
+  document.getElementById('app-footer').hidden = todos.length === 0
+
+  const retention = document.getElementById('retention-note')
+  retention.textContent = done > 0 ? `Completed tasks are removed after ${RETENTION_DAYS} days.` : ''
 }
 
 async function addTodo() {
@@ -80,19 +165,6 @@ async function addTodo() {
     showError(`Could not add todo: ${err.message}`)
   }
   input.value = ''
-  refresh()
-}
-
-async function toggle(id, completed) {
-  try {
-    await api(`/api/todos/${id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ completed }),
-    })
-  } catch (err) {
-    showError(`Could not update todo: ${err.message}`)
-  }
   refresh()
 }
 
@@ -114,10 +186,21 @@ async function clearCompleted() {
   refresh()
 }
 
+async function clearAll() {
+  try {
+    const todos = await api('/api/todos')
+    for (const t of todos) await api(`/api/todos/${t.id}`, { method: 'DELETE' })
+  } catch (err) {
+    showError(`Could not clear all: ${err.message}`)
+  }
+  refresh()
+}
+
 document.getElementById('add-form').addEventListener('submit', (e) => {
   e.preventDefault()
   addTodo()
 })
 document.getElementById('clear-completed').addEventListener('click', clearCompleted)
+document.getElementById('clear-all').addEventListener('click', clearAll)
 
 refresh()

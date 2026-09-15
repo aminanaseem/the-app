@@ -13,8 +13,8 @@
 - `/server` — Express API + SQLite
 - `/client` — static frontend
 - `/tests` — Vitest tests
-- `/mcp-server` — MCP server (stdio) exposing get_todos / explain_code / where_is_state_stored
-- `/agents` — scripts/prompts that drive the agentic loop
+- `/mcp-server` — MCP servers (stdio): app MCP (`index.js`) exposing get_todos / explain_code / where_is_state_stored; Linear MCP (`linear/`) exposing list_issues / get_issue / create_issue / update_issue / update_issue_status / add_issue_comment / list_projects / get_project
+- `/agents` — scripts/prompts that drive the agentic loop; `linear.mjs` is a thin MCP client over `mcp-server/linear`
 - `.github/workflows/ci.yml`
 
 ## Linear
@@ -24,6 +24,8 @@
   - On start: Backlog/Todo → In Progress
   - On PR opened: → In Review
   - On merge: → Done
+- Auth: `LINEAR_API_KEY` env var (see `.env.example`); never commit a real key. Team scope defaults to `LINEAR_TEAM_KEY` or `THE`.
+- Prefer the Linear MCP server (`mcp-server/linear`, tools via `.mcp.json` / `agents/linear.mjs`) over hand-written GraphQL calls.
 
 ## Delivery Loop Rules
 1. Never push directly to main except for the initial scaffold commit.

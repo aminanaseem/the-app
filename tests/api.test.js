@@ -23,7 +23,34 @@ describe('todo API', () => {
     expect(res.status).toBe(201)
     expect(res.body.title).toBe('buy milk')
     expect(res.body.completed).toBe(false)
+    expect(res.body.status).toBe('not_started')
+    expect(res.body.completedAt).toBeNull()
     expect(res.body.id).toBeGreaterThan(0)
+  })
+
+  it('creates a todo with an explicit status', async () => {
+    const res = await request(app)
+      .post('/api/todos')
+      .send({ title: 'ship it', status: 'in_progress' })
+    expect(res.status).toBe(201)
+    expect(res.body.status).toBe('in_progress')
+    expect(res.body.completed).toBe(false)
+  })
+
+  it('creates a todo already completed with a completed_at timestamp', async () => {
+    const res = await request(app)
+      .post('/api/todos')
+      .send({ title: 'landed', status: 'completed' })
+    expect(res.status).toBe(201)
+    expect(res.body.status).toBe('completed')
+    expect(res.body.completed).toBe(true)
+    expect(res.body.completedAt).toBeTruthy()
+  })
+
+  it('rejects an invalid status', async () => {
+    const res = await request(app).post('/api/todos').send({ title: 'x', status: 'banana' })
+    expect(res.status).toBe(400)
+    expect(res.body.error).toContain('status')
   })
 
   it('rejects a blank title', async () => {
@@ -66,6 +93,8 @@ describe('todo API', () => {
       .send({ completed: true })
     expect(res.status).toBe(200)
     expect(res.body.completed).toBe(true)
+    expect(res.body.status).toBe('completed')
+    expect(res.body.completedAt).toBeTruthy()
   })
 
   it('un-completes a todo', async () => {
@@ -76,6 +105,26 @@ describe('todo API', () => {
       .send({ completed: false })
     expect(res.status).toBe(200)
     expect(res.body.completed).toBe(false)
+    expect(res.body.status).toBe('not_started')
+    expect(res.body.completedAt).toBeNull()
+  })
+
+  it('sets an in-progress status via PATCH', async () => {
+    const added = await request(app).post('/api/todos').send({ title: 'task' })
+    const res = await request(app)
+      .patch(`/api/todos/${added.body.id}`)
+      .send({ status: 'in_progress' })
+    expect(res.status).toBe(200)
+    expect(res.body.status).toBe('in_progress')
+    expect(res.body.completed).toBe(false)
+  })
+
+  it('rejects an invalid status on PATCH', async () => {
+    const added = await request(app).post('/api/todos').send({ title: 'task' })
+    const res = await request(app)
+      .patch(`/api/todos/${added.body.id}`)
+      .send({ status: 'nope' })
+    expect(res.status).toBe(400)
   })
 
   it('deletes a todo', async () => {
@@ -106,6 +155,34 @@ describe('todo API', () => {
       .patch(`/api/todos/${added.body.id}`)
       .send({ completed: 'true' })
     expect(res.status).toBe(400)
+  })
+
+  describe('completed retention (auto-delete after 10 days)', () => {
+    it('keeps recently completed todos', async () => {
+      const added = await request(app).post('/api/todos').send({ title: 'fresh' })
+      await request(app)
+        .patch(`/api/todos/${added.body.id}`)
+        .send({ status: 'completed' })
+      const res = await request(app).get('/api/todos')
+      expect(res.body.map((t) => t.id)).toContain(added.body.id)
+    })
+
+    it('deletes completed todos older than 10 days on read', async () => {
+      const added = await request(app).post('/api/todos').send({ title: 'old' })
+      await request(app)
+        .patch(`/api/todos/${added.body.id}`)
+        .send({ status: 'completed' })
+      db.prepare("UPDATE todos SET completed_at = datetime('now', '-11 days') WHERE id = ?").run(added.body.id)
+      const res = await request(app).get('/api/todos')
+      expect(res.body.map((t) => t.id)).not.toContain(added.body.id)
+    })
+
+    it('keeps an old but not-completed todo', async () => {
+      const added = await request(app).post('/api/todos').send({ title: 'old open' })
+      db.prepare("UPDATE todos SET created_at = datetime('now', '-30 days') WHERE id = ?").run(added.body.id)
+      const res = await request(app).get('/api/todos')
+      expect(res.body.map((t) => t.id)).toContain(added.body.id)
+    })
   })
 
   it('returns 404 when deleting a missing todo', async () => {

@@ -3,6 +3,10 @@
     "the-app": {
       "command": "node",
       "args": ["mcp-server/index.js"]
+    },
+    "the-app-linear": {
+      "command": "node",
+      "args": ["mcp-server/linear/index.js"]
     }
   }
 }

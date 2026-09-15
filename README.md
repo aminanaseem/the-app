@@ -2,7 +2,21 @@
 
 A minimal **todo list** (add, complete, delete, persist) built and operated end-to-end by an **agentic delivery loop**: Linear <-> GitHub <-> CI <-> AI Agents <-> MCP.
 
+**Live demo: https://the-app-production-f6a5.up.railway.app** (deployed on Railway)
+
 The todo app is intentionally trivial. The real engineering effort is the delivery pipeline that surrounds it: agents that plan, code, review, and ship changes with minimal human intervention.
+
+## Tasks and statuses
+
+Each task carries a workflow status that mirrors the agentic delivery loop:
+
+| Status | Meaning |
+|--------|---------|
+| `not_started` | Created but not worked on yet |
+| `in_progress` | Being worked on |
+| `completed` | Done |
+
+Tasks can be moved between statuses from the web UI (dropdown or checkbox) or the API. Completed tasks are **automatically deleted 10 days after completion** — so finished work stays visible for at least ten days, then cleans itself up. Open tasks are never deleted automatically.
 
 ## How the loop runs end to end
 
@@ -134,21 +148,25 @@ npm start        # http://localhost:3000
 
 ## API
 
-| Method | Route            | Description                    |
-|--------|------------------|--------------------------------|
-| GET    | `/api/todos`     | List all todos                 |
-| POST   | `/api/todos`     | Add a todo `{ title }`         |
-| PATCH  | `/api/todos/:id` | Set `{ completed }` (boolean)  |
-| DELETE | `/api/todos/:id` | Delete a todo                  |
+| Method | Route            | Description                                                              |
+|--------|------------------|--------------------------------------------------------------------------|
+| GET    | `/api/todos`     | List all todos (auto-purges completed todos older than 10 days)          |
+| POST   | `/api/todos`     | Add a todo `{ title, status? }` — status defaults to `not_started`       |
+| PATCH  | `/api/todos/:id` | Set `{ status }` (`not_started`/`in_progress`/`completed`) or `{ completed }` (boolean) |
+| DELETE | `/api/todos/:id` | Delete a todo                                                             |
+| DELETE | `/api/todos?scope=completed` | Bulk-delete all completed todos                                   |
+
+Response shape: `{ id, title, status, completed, completedAt, createdAt }`. `completedAt` is set when status becomes `completed` and cleared otherwise.
 
 ## Stack
 
-- **Backend**: Node.js >= 18 + Express 4.x + SQLite (`node:sqlite` built-in), single `todos` table with WAL journaling
-- **Frontend**: One static HTML/JS page served by Express
-- **Tests**: Vitest 2.x + Supertest 7.x (API operations + persistence)
+- **Backend**: Node.js >= 22 + Express 4.x + SQLite (`node:sqlite` built-in), single `todos` table with WAL journaling
+- **Frontend**: One static HTML/JS/CSS page served by Express — gradient layout, color-coded status cards, status dropdown per task, live counters
+- **Tests**: Vitest 2.x + Supertest 7.x (API operations, status transitions, retention expiry, persistence + legacy migration)
 - **MCP**: `@modelcontextprotocol/sdk` 1.12.x + Zod 3.24.x (stdio transport)
 - **Linear integration**: Custom GraphQL client (`linear-client.js`), unit-tested with mocked fetch
 - **CI**: GitHub Actions (Ubuntu, Node 24) -- `npm ci` / `npm test` / `npm run build`
+- **Deployment**: Railway (Nixpacks, Node 22, `railway.json` with `/api/todos` healthcheck)
 
 ## Deviation notes
 
@@ -159,7 +177,19 @@ The original plan used `better-sqlite3` as the SQLite driver. The implementation
 - **Zero external dependencies** -- `node:sqlite` is built into Node.js, eliminating the `better-sqlite3` native compile step and its `node-gyp` / prebuild chain.
 - **Simpler CI** -- No native build toolchain needed on the runner (no `python`, `make`, or C++ compiler issues).
 - **Synchronous API** -- `node:sqlite`'s `DatabaseSync` class provides the same synchronous, blocking API that `better-sqlite3` is known for, so the code reads identically.
-- **Tradeoff** -- Requires Node >= 18 (CI runs Node 24). The `node:sqlite` module is marked experimental but has been stable for the patterns used here (CRUD on a single table).
+- **Tradeoff** -- Requires Node >= 22 in production (CI and Railway run Node 24/22). The `node:sqlite` module is marked experimental but has been stable for the patterns used here (CRUD on a single table).
+
+### Task statuses instead of a boolean
+
+Early builds used a `completed` boolean column. The schema now stores a workflow `status` (`not_started` / `in_progress` / `completed`) plus a `completed_at` timestamp. Reasons:
+
+- **Mirrors the delivery loop** -- the same state machine the agents use in Linear (Backlog -> In Progress -> In Review -> Done) is now visible in the app itself.
+- **Retention needs a date** -- "auto-delete completed after 10 days" requires knowing *when* a task was completed, which a boolean cannot express.
+- **Backwards compatible** -- legacy databases with the `completed` column are auto-migrated on startup by `server/db.js`.
+
+### Completed-task retention (10 days)
+
+Completed tasks are purged automatically on `GET /api/todos` once they have been completed for 10+ days (`expireCompleted` in `server/app.js`). Open tasks are never auto-removed. The web UI states this rule in the footer so removal is not surprising.
 
 ### Agent scripts as thin MCP clients
 
@@ -167,7 +197,7 @@ Rather than building a full agent orchestration framework, agent scripts (`agent
 
 ### Minimal test scope
 
-Tests cover API operations (add/complete/delete/bulk-delete/validation) and database persistence (WAL journaling, file-backed reopen) but do not test the frontend. The frontend is intentionally untested to keep the scope small and focused on the delivery loop.
+Tests cover API operations (add/complete/delete/bulk-delete/validation/status transitions/retention expiry) and database persistence (WAL journaling, file-backed reopen, legacy migration) but do not test the frontend. The frontend is intentionally untested to keep the scope small and focused on the delivery loop.
 
 ## Stretch goals status
 
@@ -189,17 +219,19 @@ the-app/
   .github/workflows/ci.yml # GitHub Actions CI
   .gitignore               # node_modules/, data/, .env, etc.
   .mcp.json                # MCP server registration (Claude Code auto-loads)
+  .node-version            # Pins Node 22 for Railway builds
   AGENTS.md                # Agent context (mirrors CLAUDE.md)
   CLAUDE.md                # Claude Code project memory
   package.json             # Root package
+  railway.json             # Railway deployment config (Nixpacks, healthcheck)
   README.md                # This file
   vitest.config.js         # Vitest config (externalizes node:sqlite)
   agents/
     linear.mjs             # CLI MCP client for Linear
   client/
-    app.js                 # Frontend JS (fetch API, renders todo list)
+    app.js                 # Frontend JS (status UI, fetch API, counters)
     index.html             # Single HTML page
-    style.css              # Minimal CSS
+    style.css              # Polished UI styles (gradient theme, status cards)
   data/
     todos.db               # SQLite database (runtime, gitignored)
   mcp-server/
@@ -216,10 +248,18 @@ the-app/
         smoke.test.js          # MCP protocol smoke tests
         integration.test.js    # Live integration tests (auto-skip without API key)
   server/
-    app.js                 # Express app factory (CRUD routes)
-    db.js                  # SQLite setup via node:sqlite (WAL, DDL)
+    app.js                 # Express app factory (CRUD routes, status, retention)
+    db.js                  # SQLite setup via node:sqlite (WAL, DDL, migration)
     index.js               # Server entrypoint (creates db, app, listens on :3000)
   tests/
-    api.test.js            # API tests
-    persist.test.js        # Persistence tests
+    api.test.js            # API tests (status, retention, validation)
+    persist.test.js        # Persistence + legacy migration tests
 ```
+
+## Deployment
+
+The app is deployed to Railway and serves a live demo. Configuration lives in `railway.json` (Nixpacks builder, healthcheck on `/api/todos`) and `.node-version` pins Node 22 so the built-in `node:sqlite` module is available.
+
+- **Live URL**: https://the-app-production-f6a5.up.railway.app
+- Deploy from the Railway dashboard (GitHub `aminanaseem/the-app`) or `railway up` from the repo root.
+- Note: the Railway free plan sleeps the service after inactivity and wakes it on the next request, so a tiny delay on the first load is normal.

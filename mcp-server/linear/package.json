@@ -1,0 +1,24 @@
+{
+  "name": "the-app-linear-mcp-server",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Linear MCP server for the-app (stdio transport)",
+  "main": "index.js",
+  "bin": {
+    "the-app-linear-mcp": "./index.js"
+  },
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "scripts": {
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.1",
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "vitest": "^2.1.1"
+  }
+}

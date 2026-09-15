@@ -3,6 +3,9 @@
 A stdio-transport MCP server exposing the todo app and its codebase to LLM agents
 (Claude Code, Codex, etc.).
 
+There is also a separate Linear MCP server at `mcp-server/linear/` (Linear issue/project tools,
+auth via `LINEAR_API_KEY`) — see `mcp-server/linear/README.md`.
+
 ## Tools
 
 | Tool | Description |

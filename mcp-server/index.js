@@ -36,9 +36,9 @@ server.tool(
     const db = openDb()
     try {
       const todos = db
-        .prepare('SELECT id, title, completed, created_at FROM todos ORDER BY created_at DESC, id DESC')
+        .prepare('SELECT id, title, status, created_at, completed_at FROM todos ORDER BY created_at DESC, id DESC')
         .all()
-        .map((r) => ({ ...r, completed: Boolean(r.completed) }))
+        .map((r) => ({ ...r, completed: r.status === 'completed' }))
       return {
         content: [{ type: 'text', text: JSON.stringify(todos, null, 2) }],
       }

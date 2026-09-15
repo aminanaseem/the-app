@@ -3,21 +3,58 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>The App — Todos</title>
+    <title>The App — My Tasks</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
-    <main>
-      <h1>Todos</h1>
+    <main class="app">
+      <header class="app-header">
+        <div class="brand">
+          <span class="brand-dot"></span>
+          <div>
+            <h1>My Tasks</h1>
+            <p class="subtitle">Track what's next, what's now, and what's done.</p>
+          </div>
+        </div>
+        <div id="summary" class="summary">
+          <span class="summary-item"><b id="count-open">0</b> open</span>
+          <span class="summary-item in-progress"><b id="count-progress">0</b> in progress</span>
+          <span class="summary-item done"><b id="count-done">0</b> done</span>
+        </div>
+      </header>
+
       <div id="error-banner" class="error-banner" hidden></div>
-      <form id="add-form">
-        <input id="new-todo" type="text" placeholder="What needs to be done?" autocomplete="off" maxlength="200" />
-        <button type="submit" id="add-btn">Add</button>
+
+      <form id="add-form" class="add-form">
+        <input
+          id="new-todo"
+          type="text"
+          placeholder="What needs to be done?"
+          autocomplete="off"
+          maxlength="200"
+        />
+        <button type="submit" id="add-btn">Add task</button>
       </form>
-      <ul id="todo-list"></ul>
-      <p id="clear-wrap" hidden>
-        <button type="button" id="clear-completed" class="text-btn">Clear completed</button>
+
+      <ul id="todo-list" class="todo-list"></ul>
+
+      <p id="empty-state" class="empty-state" hidden>
+        Nothing here yet. Add your first task above.
       </p>
+
+      <footer id="app-footer" class="app-footer" hidden>
+        <span id="retention-note"></span>
+        <div class="footer-actions">
+          <button type="button" id="clear-completed" class="text-btn">Clear completed</button>
+          <button type="button" id="clear-all" class="text-btn danger">Clear all</button>
+        </div>
+      </footer>
     </main>
     <script src="app.js"></script>
   </body>

@@ -1,11 +1,15 @@
 import express from 'express'
 
+const VALID_STATUSES = ['not_started', 'in_progress', 'completed']
+const COMPLETED_RETENTION_DAYS = 10
+
 export function createApp(db) {
   const app = express()
   app.use(express.json())
   app.use(express.static('client'))
 
   app.get('/api/todos', (req, res) => {
+    expireCompleted(db)
     const rows = db
       .prepare('SELECT * FROM todos ORDER BY created_at DESC, id DESC')
       .all()
@@ -20,7 +24,15 @@ export function createApp(db) {
     if (title.length > 200) {
       return res.status(400).json({ error: 'title must be at most 200 characters' })
     }
-    const info = db.prepare('INSERT INTO todos (title) VALUES (?)').run(title)
+    let status = req.body?.status
+    if (status === undefined) status = 'not_started'
+    if (!VALID_STATUSES.includes(status)) {
+      return res.status(400).json({ error: 'status must be not_started, in_progress, or completed' })
+    }
+    const completedAt = status === 'completed' ? now() : null
+    const info = db
+      .prepare('INSERT INTO todos (title, status, completed_at) VALUES (?, ?, ?)')
+      .run(title, status, completedAt)
     const row = db.prepare('SELECT * FROM todos WHERE id = ?').get(info.lastInsertRowid)
     res.status(201).json(toTodo(row))
   })
@@ -34,16 +46,35 @@ export function createApp(db) {
     if (!row) {
       return res.status(404).json({ error: 'todo not found' })
     }
-    const hasCompleted = req.body && 'completed' in req.body
-    let completed
-    if (!hasCompleted) {
-      completed = !Boolean(row.completed)
-    } else if (typeof req.body.completed === 'boolean') {
-      completed = req.body.completed
-    } else {
-      return res.status(400).json({ error: 'completed must be a boolean' })
+    const body = req.body || {}
+    const hasCompleted = 'completed' in body
+    const hasStatus = 'status' in body
+
+    let status = row.status
+    let completedAt = row.completed_at
+
+    if (hasStatus) {
+      if (!VALID_STATUSES.includes(body.status)) {
+        return res.status(400).json({ error: 'status must be not_started, in_progress, or completed' })
+      }
+      status = body.status
+      completedAt = status === 'completed' ? (row.completed_at || now()) : null
     }
-    db.prepare('UPDATE todos SET completed = ? WHERE id = ?').run(completed ? 1 : 0, id)
+
+    if (hasCompleted) {
+      if (typeof body.completed !== 'boolean') {
+        return res.status(400).json({ error: 'completed must be a boolean' })
+      }
+      status = body.completed ? 'completed' : 'not_started'
+      completedAt = body.completed ? (row.completed_at || now()) : null
+    }
+
+    if (!hasStatus && !hasCompleted) {
+      status = row.status === 'completed' ? 'not_started' : 'completed'
+      completedAt = status === 'completed' ? now() : null
+    }
+
+    db.prepare('UPDATE todos SET status = ?, completed_at = ? WHERE id = ?').run(status, completedAt, id)
     const updated = db.prepare('SELECT * FROM todos WHERE id = ?').get(id)
     res.json(toTodo(updated))
   })
@@ -52,7 +83,7 @@ export function createApp(db) {
     if (req.query.scope !== 'completed') {
       return res.status(400).json({ error: 'unsupported scope; use ?scope=completed' })
     }
-    db.prepare('DELETE FROM todos WHERE completed = 1').run()
+    db.prepare("DELETE FROM todos WHERE status = 'completed'").run()
     res.status(204).end()
   })
 
@@ -71,6 +102,16 @@ export function createApp(db) {
   return app
 }
 
+function expireCompleted(db) {
+  db.prepare(
+    `DELETE FROM todos WHERE status = 'completed' AND completed_at IS NOT NULL AND completed_at <= datetime('now', ?)`
+  ).run(`-${COMPLETED_RETENTION_DAYS} days`)
+}
+
+function now() {
+  return new Date().toISOString().slice(0, 19).replace('T', ' ')
+}
+
 function parseId(raw) {
   if (typeof raw !== 'string' || !/^[0-9]+$/.test(raw)) {
     return null
@@ -83,7 +124,9 @@ function toTodo(row) {
   return {
     id: row.id,
     title: row.title,
-    completed: Boolean(row.completed),
+    status: row.status,
+    completed: row.status === 'completed',
+    completedAt: row.completed_at ?? null,
     createdAt: row.created_at,
   }
 }
